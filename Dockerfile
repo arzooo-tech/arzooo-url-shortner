@@ -1,6 +1,24 @@
 FROM node:12-alpine
 
-RUN apk add --update bash
+RUN apk add --no-cache \
+        bash \
+        curl \
+        git \
+        zip \
+        jq \
+        groff \
+        python3 \
+        coreutils \
+    &&  apk --update add --virtual build-dependencies python3-dev \
+    &&  curl -s -O https://bootstrap.pypa.io/get-pip.py \
+    &&  python3 get-pip.py \
+    &&  rm get-pip.py \
+    &&  pip install --no-cache-dir awscli \
+    &&  apk del build-dependencies \
+    && find /usr/bin/ -name '*.pyc' -delete \
+    && find /usr/lib/ -name '*.pyc' -delete \
+    && yarn cache clean
+
 
 # Setting working directory. 
 WORKDIR /usr/src/app
@@ -19,6 +37,8 @@ RUN chmod +x ./wait-for-it.sh
 RUN npm run build
 
 EXPOSE 3000
+
+SHELL ["/bin/bash", "-c"]
 
 # Running the app
 CMD [ "npm", "start" ]
