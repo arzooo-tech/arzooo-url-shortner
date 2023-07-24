@@ -60,7 +60,7 @@ app.prepare().then(async () => {
     (req, res) => app.render(req, res, "/verify", { token: req.token })
   );
 
-  server.get("/:id", asyncHandler(links.redirect(app)));
+  server.get("/r/:id", asyncHandler(links.redirect(app)));
 
   // Error handler
   server.use(helpers.error);

@@ -284,7 +284,7 @@ const Shortener = () => {
                 mb={2}
                 bold
               >
-                {formState.values.domain || defaultDomain}/
+                {formState.values.domain || defaultDomain}/r/
               </Text>
               <TextInput
                 {...text("customurl")}
