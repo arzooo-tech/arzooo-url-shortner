@@ -1,0 +1,84 @@
+pipeline {
+    agent {
+        kubernetes {
+            cloud "kubernetes"
+            yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: jenkins
+spec:
+  containers:
+  - name: dind
+    image: docker:dind
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: docker-graph-storage
+      mountPath: /var/lib/docker
+  restartPolicy: Never
+  volumes:
+  - name: docker-graph-storage
+    emptyDir: {}
+'''
+          }
+      }
+
+    environment {
+        AWS_ACCESS_KEY_ID     = credentials('aws_access_key_id')
+        AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key')
+        AWS_DEFAULT_REGION    = 'ap-south-1'
+        github_creds          = credentials('jenkins-github-sre')
+        AWS_REGION            = 'ap-south-1'
+        AWS_ACCOUNT_ID        = '092042625037'
+        ECS_CLUSTER_NAME      = 'central-platforms-nonprod'
+        ECR_REPO_NAME         = 'arzooo-url-shortner-np'
+        ECS_SERVICE_NAME      = 'arzooo-url-shortner-np'
+
+    }
+
+    stages {
+
+        stage("Install pre-requisites"){
+          steps{
+            container("dind"){
+              script{
+                sh "apk add curl jq py3-pip"
+                sh "apk add --update coreutils"
+                sh "pip3 --version"
+                sh "apk add aws-cli"
+                sh "aws --version"
+                sh "docker --version"
+                
+              }
+            }
+          }
+        }
+
+        stage("clone git repo ") {
+            steps {
+                container("dind") {
+                    script{
+                      git branch: "development", credentialsId: 'jenkins-github-sre', url: 'https://github.com/arzooo-tech/arzooo-url-shortner.git'
+                    }
+                }
+            }
+        }
+      
+        stage("Docker commands") {
+            steps {
+                container("dind") {
+                    script{
+                      
+                      sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+                      sh "docker build -t ${ECR_REPO_NAME} ."
+                      sh "docker tag ${ECR_REPO_NAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:latest"
+                      sh "docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}:latest"
+                      sh "aws ecs update-service --force-new-deployment --service $ECS_SERVICE_NAME --cluster $ECS_CLUSTER_NAME --region $AWS_REGION"
+
+                    }
+                }
+            }
+        }
+    }
+}
