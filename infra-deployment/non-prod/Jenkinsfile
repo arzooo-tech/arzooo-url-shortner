@@ -9,7 +9,7 @@ pipeline {
         AWS_REGION            = 'ap-south-1'
         AWS_ACCOUNT_ID        = '145023133364'
         ECS_CLUSTER_NAME      = 'central-platforms-nonprod'
-        ECR_REPO_NAME         = 'arzooo-url-shortner'
+        ECR_REPO_NAME         = 'retailtech-url-shortner-np'
         ECS_SERVICE_NAME      = 'arzooo-url-shortner-np'
     }
 
